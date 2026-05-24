@@ -90,26 +90,26 @@ SYMBOL_COOLDOWN_SEC   = 30          # cooldown lebih lama setelah close
 RE_SCAN_DELAY_SEC     = 0.2         # rescan lebih cepat
 
 # ── NOISE FILTER v2 ───────────────────────────────────────
-CHOP_INDEX_THRESHOLD  = 55.0        # lebih ketat dari v14 (58)
-MIN_BB_WIDTH_PCT      = 0.006       # BB harus cukup lebar
-MIN_ADX               = 22          # ADX minimum untuk masuk
+CHOP_INDEX_THRESHOLD  = 61.0        # longgar — v14 pakai 58, naik ke 61
+MIN_BB_WIDTH_PCT      = 0.004       # longgar — pasar low vol juga bisa masuk
+MIN_ADX               = 15          # lebih rendah — ADX 22 terlalu ketat saat sideways
 MIN_VOLUME_USDT       = 2_000_000   # minimum volume 24h = $2M
-MIN_VOL_SURGE_ENTRY   = 1.8         # volume harus surge 1.8× dari rata-rata
+MIN_VOL_SURGE_ENTRY   = 1.3         # diturunin — 1.8 terlalu ketat
 MAX_SPREAD_RATIO      = 0.25        # spread ketat
-MIN_OB_PRESSURE       = 0.15        # minimum OB imbalance untuk entry
+MIN_OB_PRESSURE       = 0.05        # turunin — testnet OB sering imbalanced
 
 # ── MOMENTUM FILTER ──────────────────────────────────────
-MIN_MOMENTUM_PCT      = 0.0020      # minimum momentum 0.20%
+MIN_MOMENTUM_PCT      = 0.0010      # turunin ke 0.10% — lebih sering entry
 MIN_TREND_CANDLES     = 3           # minimal 3 candle searah
 
 # ── SIGNAL QUALITY ────────────────────────────────────────
-MIN_SCORE             = 50          # lebih tinggi dari v14
-MIN_ENTRY_SIGNALS     = 3           # butuh 3 signal minimum
+MIN_SCORE             = 42          # turunin — 50 terlalu ketat
+MIN_ENTRY_SIGNALS     = 2           # 2 signal cukup — 3 terlalu ketat
 MAX_SL_ATR_PCT        = 0.008       # skip kalau ATR terlalu gede
 
 # ── SESSION FILTER ────────────────────────────────────────
 BAD_HOURS_UTC         = {4, 5, 6}
-BAD_HOURS_MIN_SCORE   = 65
+BAD_HOURS_MIN_SCORE   = 55          # turunin — 65 hampir tidak mungkin kena
 
 # ── KILL SWITCH ───────────────────────────────────────────
 DAILY_LOSS_LIMIT      = -5.0
@@ -425,8 +425,8 @@ def is_noise_market(df_5m, direction):
     except:
         pass
 
-    # Threshold: noise_score >= 40 = noisy market
-    is_noisy = noise_score >= 40
+    # Threshold: noise_score >= 55 = noisy market (lebih longgar)
+    is_noisy = noise_score >= 55
     return is_noisy, noise_score, reasons
 
 
@@ -1016,8 +1016,8 @@ def determine_direction(df_5m, df_15m=None):
     if btc_t in BULL_TRENDS:   long_pts  += 2
     elif btc_t in BEAR_TRENDS:  short_pts += 2
 
-    if long_pts > short_pts and long_pts >= 7:  return "LONG"
-    if short_pts > long_pts and short_pts >= 7: return "SHORT"
+    if long_pts > short_pts and long_pts >= 5:  return "LONG"
+    if short_pts > long_pts and short_pts >= 5: return "SHORT"
     return None
 
 
@@ -1098,11 +1098,14 @@ def should_enter(symbol):
         _stats["skipped_no_momentum"] += 1
         return None, f"mom_weak({mom5*100:.2f}%)"
 
-    # Scalp mode check
+    # Scalp mode check — MEAN_REV tidak langsung skip, tapi naikkan threshold
     scalp_mode = _macro.get("scalp_mode", "TREND")
     if scalp_mode == "MEAN_REV":
-        _stats["skipped_mean_rev"] += 1
-        return None, "skip_MEAN_REV"
+        # Boleh masuk kalau score sangat tinggi (65+) atau ADX kuat
+        adx_val = float(df_5m["adx"].iloc[-1]) if "adx" in df_5m.columns else 0
+        if adx_val < 25 and score < 65:
+            _stats["skipped_mean_rev"] += 1
+            return None, f"skip_MEAN_REV(adx={adx_val:.0f},score={score:.0f})"
 
     # BTC alignment check
     btc_5m  = _macro["btc_trend_5m"]
