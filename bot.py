@@ -1,9 +1,9 @@
 """
 Bot Scalping v14 — ADAPTIVE MOMENTUM ENGINE 🎯
-================================================
+==============================================
 
 PERUBAHAN UTAMA dari v13
-─────────────────────────
+────────────────────────
 ✅ ATR ADAPTIVE SL/TP/TRAIL — bukan fixed %, tapi berdasarkan volatility coin
 ✅ CHOP FILTER — detect regime sideways/chop, skip entry kalau market jelek
 ✅ DELAYED TRAIL — kasih napas dulu, trail baru aktif setelah profit >= 0.20%
