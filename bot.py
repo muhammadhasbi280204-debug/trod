@@ -44,7 +44,11 @@ client = Client(os.getenv("API_KEY"), os.getenv("API_SECRET"))
 client.FUTURES_URL = "https://testnet.binancefuture.com/fapi"
 # Untuk real: comment baris atas
 # ══════════════════════════════════════════════════════════
-
+try:
+    info = client.futures_account()
+    print(f"✅ Account OK: {info.get('totalWalletBalance', 'N/A')} USDT")
+except Exception as e:
+    print(f"❌ Account error: {e}")
 
 # ════════════════════════════════════════════════════
 #  CONFIG v14
